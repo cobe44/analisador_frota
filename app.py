@@ -7,6 +7,7 @@ import math
 import io
 import warnings
 
+# Ignorar avisos
 warnings.filterwarnings("ignore")
 
 st.set_page_config(page_title="Gestão de Frota", layout="wide")
@@ -169,7 +170,6 @@ MAPA_CIDADES_PASSOS = {
 st.sidebar.header("Configuração da Operação")
 operacao_selecionada = st.sidebar.selectbox("Selecione a Operação:", ["Tatuí (Ovos)", "Passos (Frango)", "Ipiguá (Pintos)"])
 
-# Configurações Dinâmicas
 if operacao_selecionada == "Tatuí (Ovos)":
     POIS_ATIVOS = POIS_TATUI
     NOME_BASE = "Base Tatuí"
@@ -180,7 +180,7 @@ elif operacao_selecionada == "Passos (Frango)":
     NOME_BASE = "JBS Passos" 
     RAIO_PADRAO_BASE = 3000 
     RAIO_LOCAL_PADRAO = 120 
-else: # Ipiguá
+else: 
     POIS_ATIVOS = POIS_IPIGUA
     NOME_BASE = "Incubatório Ipiguá"
     RAIO_PADRAO_BASE = 2000
@@ -230,6 +230,7 @@ def get_current_poi_name(lat, lon, pois_dict, threshold):
     return None
 
 def normalize_columns(df):
+    # Normalização robusta
     df.columns = [
         str(c).strip().upper()
         .replace('Ã', 'A').replace('Ç', 'C').replace('Ó', 'O').replace('Í', 'I').replace('É', 'E')
@@ -296,7 +297,7 @@ def load_data_universal(uploaded_file):
                 if df[col].dtype == object: df[col] = df[col].apply(clean_float)
                 else: df[col] = pd.to_numeric(df[col], errors='coerce')
         
-        # SEM LIMPEZA AGRESSIVA DE CIDADE (Respeitar acentos)
+        # --- CORREÇÃO: NÃO REMOVE MAIS ACENTOS DA CIDADE ---
         if 'CIDADE' in df.columns:
             df['CIDADE'] = df['CIDADE'].astype(str).str.strip().str.upper()
 
@@ -361,7 +362,7 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
             if not poi and "Ipiguá" in base_name:
                 if row['KM/H'] == 0 and 'CIDADE' in df.columns and pd.notna(row['CIDADE']):
                     c_raw = str(row['CIDADE']).strip().upper()
-                    if "IPIGUA" not in c_raw: poi = str(row['CIDADE']) # Mantém original do CSV
+                    if "IPIGUA" not in c_raw: poi = str(row['CIDADE']) # Mantém nome original do CSV
 
             if poi and poi != base_name and poi != viagem_atual['last_poi']:
                 viagem_atual['rota_seq'].append(poi)
@@ -378,7 +379,7 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
                     dist = abs(hodo_final - viagem_atual['hodo_inicial'])
                     duracao_segundos = (viagem_atual['fim'] - viagem_atual['inicio']).total_seconds()
                     duracao_fmt = format_seconds_to_hms(duracao_segundos)
-                    duracao_horas_float = duracao_segundos / 3600
+                    duracao_hours = duracao_segundos / 3600
                     
                     df_v = pd.DataFrame(viagem_atual['dados'])
                     
@@ -420,12 +421,13 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
                     
                     rota_display = " > ".join(rota_limpa)
 
-                    # Busca Cidade Principal
+                    # Busca Cidade Principal (Com Mapeamento Correto)
                     if 'CIDADE' in df_v.columns:
+                        # Se o local crítico for uma fazenda conhecida, pega a cidade do mapa
                         if local_crit in MAPA_CIDADES_PASSOS:
                             cidade_destino_principal = MAPA_CIDADES_PASSOS[local_crit]
-                        
-                        if cidade_destino_principal == "-":
+                        else:
+                            # Fallback: cidade onde mais parou
                             stops = df_v[df_v['KM/H'] == 0].copy()
                             if not stops.empty:
                                 stops['C_NORM'] = stops['CIDADE'].astype(str).str.strip().str.upper()
@@ -433,7 +435,7 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
                                 cts = stops['C_NORM'].value_counts()
                                 for c, _ in cts.items():
                                     if not any(x in c for x in ex):
-                                        # Pega a primeira ocorrência original
+                                        # Pega o nome original (sem limpeza agressiva) para manter acentos
                                         raw_name = stops[stops['C_NORM']==c]['CIDADE'].iloc[0]
                                         cidade_destino_principal = str(raw_name)
                                         break
@@ -451,7 +453,7 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
                         'Data Início': viagem_atual['inicio'],
                         'Data Fim': viagem_atual['fim'],
                         'Tempo Total': duracao_fmt,
-                        'Duração Horas': duracao_horas_float,
+                        'Duração Horas': duracao_hours,
                         'Cidade Principal': cidade_destino_principal, 
                         'Rota': rota_display,
                         'Distância (km)': round(dist, 2),
@@ -479,7 +481,7 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
         })
     return pd.DataFrame(viagens)
 
-# --- INTERFACE PRINCIPAL ---
+# --- INTERFACE ---
 
 uploaded_file = st.file_uploader("Arraste relatórios (Qualquer formato)", type=['xlsx', 'xls', 'csv'])
 
@@ -539,4 +541,3 @@ if uploaded_file:
                         fig = px.scatter(df_final, x='Distância (km)', y='Duração Horas', size='Tempo Ocioso TOTAL (min)', title="Eficiência", custom_data=['Rota'])
                         fig.update_traces(hovertemplate="Rota: %{customdata[0]}")
                         st.plotly_chart(fig, use_container_width=True)
-
