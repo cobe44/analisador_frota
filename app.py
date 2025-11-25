@@ -29,7 +29,7 @@ POIS_TATUI = {
 }
 
 POIS_PASSOS = {
-    "JBS Passos": [(-20.731648, -46.572150), (-20.73273, -46.573021), (-20.731648, -46.57215)],
+    "JBS Passos": [(-20.731648, -46.572150), (-20.73273, -46.573021), (-20.731648, -46.57215)], 
     'GRANJA MANOELA': [(-20.80083, -46.304)], 'SÍTIO MORRO CAVADO': [(-20.77593, -46.37077)], 
     'FAZENDA CONQUISTA': [(-20.8788, -46.46472), (-21.31993, -47.00195)], 'SITIO SOQUETE': [(-20.79604, -46.39279)], 
     'SÍTIO LEMBRANÇA': [(-20.73954, -46.39466)], 'SÍTIO MONJOLINHO/SÃO JOSÉ': [(-20.88404, -46.40669)], 
@@ -295,8 +295,9 @@ def load_data_universal(uploaded_file):
                 if df[col].dtype == object: df[col] = df[col].apply(clean_float)
                 else: df[col] = pd.to_numeric(df[col], errors='coerce')
         
+        # CORREÇÃO: REMOVIDO CÓDIGO QUE LIMPAVA ACENTOS DE FORMA ERRADA
         if 'CIDADE' in df.columns:
-            df['CIDADE'] = df['CIDADE'].astype(str).str.encode('ascii', 'ignore').str.decode('utf-8').str.title()
+            df['CIDADE'] = df['CIDADE'].astype(str).str.strip().str.title()
 
         return df
     except Exception as e:
@@ -355,7 +356,6 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
             
             poi = get_current_poi_name(lat, lon, pois_dict, raio_points)
             
-            # Lógica para Ipiguá (sem POIs fixos, apenas Cidades)
             if not poi and "Ipiguá" in base_name:
                 if row['KM/H'] == 0 and 'CIDADE' in df.columns and pd.notna(row['CIDADE']):
                     c_raw = str(row['CIDADE']).strip().title()
@@ -406,26 +406,23 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
 
                     # CIDADE PRINCIPAL & ROTA LIMPA (PASSOS)
                     cidade_destino_principal = "-"
-                    
-                    # Limpa a lista de rota para remover cidades se for operação Passos
                     rota_limpa = []
-                    for ponto in viagem_atual['rota_seq']:
-                        if nome_op == "Passos (Frango)":
-                            # Só adiciona se for a Base ou estiver na lista de POIs conhecidos (Granjas)
+                    
+                    # Lógica Limpeza de Rota (Só deixa Base e Fazendas)
+                    if nome_op == "Passos (Frango)":
+                        for ponto in viagem_atual['rota_seq']:
                             if ponto == base_name or ponto in POIS_PASSOS:
                                 rota_limpa.append(ponto)
-                        else:
-                            rota_limpa.append(ponto)
+                    else:
+                        rota_limpa = viagem_atual['rota_seq']
                     
                     rota_display = " > ".join(rota_limpa)
 
-                    # Busca Cidade Principal (Baseada no mapa)
+                    # Busca Cidade Principal (Com Mapeamento)
                     if 'CIDADE' in df_v.columns:
-                        # Prioridade: Cidade do Local Crítico (Ociosidade)
                         if local_crit in MAPA_CIDADES_PASSOS:
                             cidade_destino_principal = MAPA_CIDADES_PASSOS[local_crit]
                         
-                        # Fallback: Cidade onde ficou mais tempo parado no geral
                         if cidade_destino_principal == "-":
                             stops = df_v[df_v['KM/H'] == 0].copy()
                             if not stops.empty:
@@ -437,9 +434,7 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
                                         cidade_destino_principal = stops[stops['C_NORM']==c]['CIDADE'].iloc[0].title()
                                         break
                     
-                    # Se for Passos e tiver só Base > Base, tenta inserir a fazenda se detectada
                     if nome_op == "Passos (Frango)":
-                        # Se a rota ficou "JBS > JBS", mas tem um local critico (fazenda), insere ele
                         if len(rota_limpa) == 2 and local_crit in POIS_PASSOS:
                              rota_display = f"{base_name} > {local_crit} > {base_name}"
                              if cidade_destino_principal == "-":
@@ -452,7 +447,7 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
                         'Data Início': viagem_atual['inicio'],
                         'Data Fim': viagem_atual['fim'],
                         'Tempo Total': duracao_fmt,
-                        'Duração Horas': duracao_hours,
+                        'Duração Horas': duracao_horas_float,
                         'Cidade Principal': cidade_destino_principal, 
                         'Rota': rota_display,
                         'Distância (km)': round(dist, 2),
@@ -480,7 +475,7 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
         })
     return pd.DataFrame(viagens)
 
-# --- INTERFACE ---
+# --- INTERFACE PRINCIPAL ---
 
 uploaded_file = st.file_uploader("Arraste relatórios (Qualquer formato)", type=['xlsx', 'xls', 'csv'])
 
@@ -497,10 +492,11 @@ if uploaded_file:
             else:
                 st.success(f"Operação {operacao_selecionada}: {len(df_final)} viagens identificadas.")
                 
-                cols_display = ['Operação', 'Placa', 'ID Viagem', 'Data Início', 'Data Fim', 'Cidade Principal', 'Rota', 'Tempo Total', 'Distância (km)', 'Vel. Média >50km/h', 'Tempo Ocioso TOTAL (min)', 'Local Mais Ocioso', 'Tempo Ocioso NO LOCAL (min)']
                 df_show = df_final.copy()
                 df_show['Data Início'] = df_show['Data Início'].dt.strftime('%d/%m/%Y %H:%M:%S')
                 df_show['Data Fim'] = df_show['Data Fim'].dt.strftime('%d/%m/%Y %H:%M:%S')
+
+                cols_display = ['Operação', 'Placa', 'ID Viagem', 'Data Início', 'Data Fim', 'Cidade Principal', 'Rota', 'Tempo Total', 'Distância (km)', 'Vel. Média >50km/h', 'Tempo Ocioso TOTAL (min)', 'Local Mais Ocioso', 'Tempo Ocioso NO LOCAL (min)']
 
                 tab1, tab2 = st.tabs(["Relatório", "Dashboard"])
                 
@@ -525,11 +521,9 @@ if uploaded_file:
                         fig.update_traces(hovertemplate="Rota: %{customdata[0]}<br>Total: %{y}<br>Local: %{customdata[1]} (%{customdata[2]} min)")
                         st.plotly_chart(fig, use_container_width=True)
                     with c2:
-                        # GRÁFICO TEMPO MÉDIO
-                        # Agrupa por Rota (limpa) ou Cidade Principal se disponível
-                        df_final['Agrupador'] = df_final.apply(lambda x: x['Rota'] if x['Cidade Principal'] == "-" else x['Cidade Principal'], axis=1)
-                        df_g = df_final.groupby('Agrupador')['Duração Horas'].mean().reset_index()
-                        fig = px.bar(df_g, y='Agrupador', x='Duração Horas', orientation='h', title="Tempo Médio (h)", text_auto='.1f')
+                        df_final['Rota_Graph'] = df_final.apply(lambda x: x['Cidade Principal'] if x['Cidade Principal'] != "-" else x['Rota'], axis=1)
+                        df_g = df_final.groupby('Rota_Graph')['Duração Horas'].mean().reset_index()
+                        fig = px.bar(df_g, y='Rota_Graph', x='Duração Horas', orientation='h', title="Tempo Médio por Destino (h)", text_auto='.1f')
                         st.plotly_chart(fig, use_container_width=True)
                     
                     c3, c4 = st.columns(2)
