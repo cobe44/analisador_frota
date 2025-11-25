@@ -6,7 +6,9 @@ import plotly.express as px
 import math
 import io
 import warnings
+from datetime import timedelta
 
+# Ignorar avisos
 warnings.filterwarnings("ignore")
 
 st.set_page_config(page_title="Gestão de Frota", layout="wide")
@@ -115,7 +117,6 @@ POIS_IPIGUA = { "Incubatório Ipiguá": [(-20.652477, -49.387725)] }
 st.sidebar.header("Configuração da Operação")
 operacao_selecionada = st.sidebar.selectbox("Selecione a Operação:", ["Tatuí (Ovos)", "Passos (Frango)", "Ipiguá (Pintos)"])
 
-# Configurações Dinâmicas
 if operacao_selecionada == "Tatuí (Ovos)":
     POIS_ATIVOS = POIS_TATUI
     NOME_BASE = "Base Tatuí"
@@ -142,6 +143,13 @@ raio_poi = st.sidebar.slider("Raio dos Locais (m)", 100, 3000, RAIO_LOCAL_PADRAO
 min_idling_minutes = st.sidebar.number_input("Alerta Ociosidade (min)", value=10)
 
 # --- FUNÇÕES ---
+
+def format_seconds_to_hms(seconds):
+    """Converte segundos para HH:MM:SS"""
+    if pd.isna(seconds) or seconds == 0: return "00:00:00"
+    m, s = divmod(int(seconds), 60)
+    h, m = divmod(m, 60)
+    return f"{h:02d}:{m:02d}:{s:02d}"
 
 def to_excel(df):
     output = io.BytesIO()
@@ -236,15 +244,15 @@ def load_data_universal(uploaded_file):
                 if df[col].dtype == object: df[col] = df[col].apply(clean_float)
                 else: df[col] = pd.to_numeric(df[col], errors='coerce')
         
-        # Limpa nomes de cidade
+        # Limpa Cidade
         if 'CIDADE' in df.columns:
-            df['CIDADE'] = df['CIDADE'].astype(str).str.encode('ascii', 'ignore').str.decode('utf-8')
+            df['CIDADE'] = df['CIDADE'].astype(str).str.encode('ascii', 'ignore').str.decode('utf-8').str.title()
 
         return df
     except Exception as e:
         st.error(f"Erro leitura: {e}"); return None
 
-def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name):
+def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome_op):
     viagens = []
     em_viagem = False
     viagem_atual = {}
@@ -296,6 +304,13 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name):
             viagem_atual['dados'].append(row)
             
             poi = get_current_poi_name(lat, lon, pois_dict, raio_points)
+            
+            # IPIGUÁ: Se não achou POI, usa a Cidade
+            if not poi and "Ipiguá" in base_name:
+                if row['KM/H'] == 0 and 'CIDADE' in df.columns and pd.notna(row['CIDADE']):
+                    c_raw = str(row['CIDADE']).strip().upper()
+                    if "IPIGUA" not in c_raw: poi = str(row['CIDADE']).title()
+
             if poi and poi != base_name and poi != viagem_atual['last_poi']:
                 viagem_atual['rota_seq'].append(poi)
                 viagem_atual['last_poi'] = poi
@@ -309,7 +324,11 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name):
                     
                     hodo_final = row['HODÔMETRO'] if 'HODÔMETRO' in df.columns else 0
                     dist = abs(hodo_final - viagem_atual['hodo_inicial'])
-                    duracao_str = str(viagem_atual['fim'] - viagem_atual['inicio']).split('.')[0]
+                    
+                    # Duração precisa em segundos
+                    duracao_segundos = (viagem_atual['fim'] - viagem_atual['inicio']).total_seconds()
+                    duracao_horas_float = duracao_segundos / 3600 # Para gráfico
+                    duracao_fmt = format_seconds_to_hms(duracao_segundos) # Para tabela (HH:MM:SS)
                     
                     df_v = pd.DataFrame(viagem_atual['dados'])
                     
@@ -330,38 +349,41 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name):
                             tempo_idle = len(df_idle)*delta_t
                             if not df_idle.empty:
                                 df_idle['POI'] = df_idle.apply(lambda r: get_current_poi_name(r['LATITUDE'], r['LONGITUDE'], pois_dict, raio_points), axis=1)
+                                if "Ipiguá" in base_name and 'CIDADE' in df_idle.columns:
+                                    df_idle['POI'] = df_idle['POI'].fillna(df_idle['CIDADE'])
+                                
                                 df_idle['L'] = df_idle['POI'].fillna("Via")
                                 ct = df_idle['L'].value_counts()
                                 if not ct.empty: local_crit, tempo_local = ct.idxmax(), ct.max()*delta_t
 
-                    # CIDADE PRINCIPAL (PARA TODOS)
+                    # CIDADE PRINCIPAL
                     cidade_destino_principal = "-"
                     rota_display = " > ".join(viagem_atual['rota_seq'])
 
-                    # Lógica Universal: Procura cidade onde ficou mais tempo parado (Vel=0)
-                    # Ignorando a cidade da Base
+                    # Lógica Universal: Cidade onde ficou mais tempo parado (Vel=0)
                     if 'CIDADE' in df_v.columns:
                         stops_all = df_v[df_v['KM/H'] == 0].copy()
                         if not stops_all.empty:
                             stops_all['C_NORM'] = stops_all['CIDADE'].astype(str).str.strip().str.upper()
-                            # Lista de exclusão baseada no nome da base
-                            exclusoes = ["-", "NAN"] + base_name.upper().split() # Ex: ['BASE', 'TATUÍ']
+                            exclusoes = ["-", "NAN"] + base_name.upper().split() 
                             
                             counts = stops_all['C_NORM'].value_counts()
                             for city, count in counts.items():
-                                # Se a cidade não contiver NENHUMA palavra da base
                                 if not any(exc in city for exc in exclusoes):
                                     cidade_destino_principal = stops_all[stops_all['C_NORM'] == city]['CIDADE'].iloc[0].title()
                                     break
                     
-                    # Se achou cidade e não achou POI específico na rota, atualiza a rota visual
                     if cidade_destino_principal != "-" and len(viagem_atual['rota_seq']) <= 2:
                          rota_display = f"{base_name} > {cidade_destino_principal} > {base_name}"
 
                     viagens.append({
-                        'Placa': placa, 'ID Viagem': viagem_atual['id'],
-                        'Data Início': viagem_atual['inicio'], 'Data Fim': viagem_atual['fim'],
-                        'Tempo Total': duracao_str,
+                        'Operação': nome_op, # Nova Coluna
+                        'Placa': placa, 
+                        'ID Viagem': viagem_atual['id'],
+                        'Data Início': viagem_atual['inicio'],
+                        'Data Fim': viagem_atual['fim'],
+                        'Tempo Total': duracao_fmt,
+                        'Duração Horas': duracao_horas_float, # Oculto, só para gráfico
                         'Cidade Principal': cidade_destino_principal, 
                         'Rota': rota_display,
                         'Distância (km)': round(dist, 2),
@@ -374,10 +396,14 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name):
                     em_viagem = False
     
     if em_viagem:
+        # Tratamento para viagem em aberto
+        duracao_segundos = (df.iloc[-1]['DATA/HORA'] - viagem_atual['inicio']).total_seconds()
         viagens.append({
+            'Operação': nome_op,
             'Placa': placa, 'ID Viagem': viagem_atual['id'],
             'Data Início': viagem_atual['inicio'], 'Data Fim': df.iloc[-1]['DATA/HORA'],
-            'Tempo Total': "Em Andamento",
+            'Tempo Total': format_seconds_to_hms(duracao_segundos),
+            'Duração Horas': duracao_segundos/3600,
             'Cidade Principal': "-",
             'Rota': " > ".join(viagem_atual['rota_seq']),
             'Distância (km)': 0, 'Vel. Média >50km/h': 0,
@@ -396,19 +422,26 @@ if uploaded_file:
     else:
         raw_df = load_data_universal(uploaded_file)
         if raw_df is not None:
-            df_final = process_routes(raw_df, raio_base, raio_poi, placa_veiculo, POIS_ATIVOS, NOME_BASE)
+            df_final = process_routes(raw_df, raio_base, raio_poi, placa_veiculo, POIS_ATIVOS, NOME_BASE, operacao_selecionada)
             
             if df_final.empty:
                 st.error(f"Nenhuma viagem detectada saindo de {NOME_BASE}.")
             else:
                 st.success(f"Operação {operacao_selecionada}: {len(df_final)} viagens identificadas.")
                 
+                # FORMATAÇÃO PARA EXIBIÇÃO
+                cols_display = ['Operação', 'Placa', 'ID Viagem', 'Data Início', 'Data Fim', 'Cidade Principal', 'Rota', 'Tempo Total', 'Distância (km)', 'Vel. Média >50km/h', 'Tempo Ocioso TOTAL (min)', 'Local Mais Ocioso', 'Tempo Ocioso NO LOCAL (min)']
+                
+                # Cria cópia para formatar datas apenas visualmente
+                df_show = df_final[cols_display].copy()
+                df_show['Data Início'] = df_show['Data Início'].dt.strftime('%d/%m/%Y %H:%M:%S')
+                df_show['Data Fim'] = df_show['Data Fim'].dt.strftime('%d/%m/%Y %H:%M:%S')
+
                 tab1, tab2 = st.tabs(["Relatório", "Dashboard"])
                 
                 with tab1:
-                    cols = ['Placa', 'ID Viagem', 'Data Início', 'Data Fim', 'Cidade Principal', 'Rota', 'Tempo Total', 'Distância (km)', 'Vel. Média >50km/h', 'Tempo Ocioso TOTAL (min)', 'Local Mais Ocioso', 'Tempo Ocioso NO LOCAL (min)']
-                    st.dataframe(df_final[cols].style.map(lambda x: 'background-color: #ffcccc' if x > min_idling_minutes else '', subset=['Tempo Ocioso TOTAL (min)', 'Tempo Ocioso NO LOCAL (min)']), width="stretch")
-                    st.download_button("Baixar Excel", data=to_excel(df_final[cols]), file_name=f"Resumo_{placa_veiculo}.xlsx")
+                    st.dataframe(df_show.style.map(lambda x: 'background-color: #ffcccc' if x > min_idling_minutes else '', subset=['Tempo Ocioso TOTAL (min)', 'Tempo Ocioso NO LOCAL (min)']), width="stretch")
+                    st.download_button("Baixar Excel", data=to_excel(df_show), file_name=f"Resumo_{placa_veiculo}.xlsx")
                     
                     st.markdown("---")
                     trip = st.selectbox("Ver no Mapa:", df_final['ID Viagem'].tolist(), format_func=lambda x: f"{x} | {df_final[df_final['ID Viagem']==x].iloc[0]['Rota']}")
@@ -427,22 +460,11 @@ if uploaded_file:
                         fig.update_traces(hovertemplate="Rota: %{customdata[0]}<br>Total: %{y}<br>Local: %{customdata[1]} (%{customdata[2]} min)")
                         st.plotly_chart(fig, use_container_width=True)
                     with c2:
-                        def time_to_hours(t_str):
-                            if "Andamento" in t_str: return 0
-                            try:
-                                if "day" in t_str: dias, rest = int(t_str.split(" day")[0]), t_str.split(", ")[1]
-                                else: dias, rest = 0, t_str
-                                h, m, s = map(int, rest.split(":"))
-                                return (dias*24) + h + m/60
-                            except: return 0
-
-                        # CORREÇÃO DO GRÁFICO DE ROTA (Usando a rota limpa ou cidade principal)
-                        df_final['Horas'] = df_final['Tempo Total'].apply(time_to_hours)
-                        # Usa Cidade Principal como agrupador se a Rota for muito complexa, senão usa Rota
+                        # GRÁFICO TEMPO MÉDIO CORRIGIDO (Usa coluna numérica 'Duração Horas')
+                        # Agrupa por Rota ou Cidade Principal se Rota for muito longa
                         df_final['Rota_Graph'] = df_final.apply(lambda x: x['Cidade Principal'] if x['Cidade Principal'] != "-" else x['Rota'], axis=1)
-                        
-                        df_g = df_final.groupby('Rota_Graph')['Horas'].mean().reset_index()
-                        fig = px.bar(df_g, y='Rota_Graph', x='Horas', orientation='h', title="Tempo Médio por Destino (h)", text_auto='.1f')
+                        df_g = df_final.groupby('Rota_Graph')['Duração Horas'].mean().reset_index()
+                        fig = px.bar(df_g, y='Rota_Graph', x='Duração Horas', orientation='h', title="Tempo Médio por Destino (h)", text_auto='.1f')
                         st.plotly_chart(fig, use_container_width=True)
                     
                     c3, c4 = st.columns(2)
@@ -451,8 +473,6 @@ if uploaded_file:
                         fig.update_traces(hovertemplate="Rota: %{customdata[0]}<br>KM: %{y}")
                         st.plotly_chart(fig, use_container_width=True)
                     with c4:
-                        fig = px.scatter(df_final, x='Distância (km)', y='Horas', size='Tempo Ocioso TOTAL (min)', title="Eficiência", custom_data=['Rota'])
+                        fig = px.scatter(df_final, x='Distância (km)', y='Duração Horas', size='Tempo Ocioso TOTAL (min)', title="Eficiência", custom_data=['Rota'])
                         fig.update_traces(hovertemplate="Rota: %{customdata[0]}")
                         st.plotly_chart(fig, use_container_width=True)
-
-
