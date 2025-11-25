@@ -6,9 +6,7 @@ import plotly.express as px
 import math
 import io
 import warnings
-from datetime import timedelta
 
-# Ignorar avisos
 warnings.filterwarnings("ignore")
 
 st.set_page_config(page_title="Gestão de Frota", layout="wide")
@@ -31,7 +29,7 @@ POIS_TATUI = {
 }
 
 POIS_PASSOS = {
-    "JBS Passos": [(-20.731648, -46.572150), (-20.73273, -46.573021), (-20.731648, -46.57215)], # NOME ATUALIZADO
+    "JBS Passos": [(-20.731648, -46.572150), (-20.73273, -46.573021), (-20.731648, -46.57215)],
     'GRANJA MANOELA': [(-20.80083, -46.304)], 'SÍTIO MORRO CAVADO': [(-20.77593, -46.37077)], 
     'FAZENDA CONQUISTA': [(-20.8788, -46.46472), (-21.31993, -47.00195)], 'SITIO SOQUETE': [(-20.79604, -46.39279)], 
     'SÍTIO LEMBRANÇA': [(-20.73954, -46.39466)], 'SÍTIO MONJOLINHO/SÃO JOSÉ': [(-20.88404, -46.40669)], 
@@ -98,7 +96,8 @@ POIS_PASSOS = {
     'FAZENDA PONTAL': [(-20.7564, -46.9401)], 'SÍTIO JD': [(-20.79067, -46.83151)], 
     'SÍTIO DOIS IRMÃOS': [(-20.69592, -46.8417)], 'FAZENDA PONTAL DA PRATA': [(-20.75907, -46.90998)], 
     'SÍTIO RANCHO DA LUA': [(-20.57351, -46.5025)], 'FAZENDA NOSSA SENHORA DA PENHA': [(-20.84833, -46.273)], 
-    'GRANJA CANCANZINHO': [(-20.82648, -46.29172)], 'FAZENDA SANTA BÁRBARA': [(-20.85436, -46.27271)], 'FAZENDA PONTA DA SERRA': [(-20.71381, -46.23641)], 'FAZENDA FLORADA DA SERRA': [(-20.96938, -46.8849)], 
+    'GRANJA CANCANZINHO': [(-20.82648, -46.29172)], 'FAZENDA SANTA BÁRBARA': [(-20.85436, -46.27271)], 
+    'FAZENDA PONTA DA SERRA': [(-20.71381, -46.23641)], 'FAZENDA FLORADA DA SERRA': [(-20.96938, -46.8849)], 
     'FAZENDA MORRO VERMELHO': [(-21.02975, -46.91374)], 'FAZENDA SANTANA': [(-20.9347, -46.92694)], 
     'FAZENDA MUMBUCA': [(-20.89542, -47.12121)], 'FAZENDA BARRA DA LONTRA': [(-20.90041, -46.92076)], 
     'SÍTIO MAMONINHO': [(-20.88282, -47.04195)], 'SÍTIO DAS OLIVEIRAS / BARREIRINHO': [(-20.9402, -46.88693)], 
@@ -111,6 +110,60 @@ POIS_PASSOS = {
 }
 
 POIS_IPIGUA = { "Incubatório Ipiguá": [(-20.652477, -49.387725)] }
+
+# --- MAPEAMENTO DE CIDADES (PASSOS) ---
+MAPA_CIDADES_PASSOS = {
+    'GRANJA MANOELA': 'ALPINÓPOLIS', 'SÍTIO MORRO CAVADO': 'ALPINÓPOLIS', 'FAZENDA CONQUISTA': 'ALPINÓPOLIS',
+    'SITIO SOQUETE': 'ALPINÓPOLIS', 'SÍTIO LEMBRANÇA': 'ALPINÓPOLIS', 'SÍTIO MONJOLINHO/SÃO JOSÉ': 'ALPINÓPOLIS',
+    'GRANJA GONÇALVES': 'ALPINÓPOLIS', 'FAZENDA SANTA CÂNDIDA': 'ALPINÓPOLIS', 'FAZENDA PRIMAVERA': 'ALTINÓPOLIS',
+    'FAZENDA MARINHEIRO': 'ARCEBURGO', 'SÍTIO TERRA NOVA': 'ARCEBURGO', 'ESTANCIA L.H.D.': 'ARCEBURGO',
+    'SÍTIO MENDES': 'ARCEBURGO', 'SÍTIO UNIÃO': 'ARCEBURGO', "SÍTIO NOSSA SENHORA APARECIDA / SÍTIO OLHOS D'ÁGUA": 'ARCEBURGO',
+    'SÍTIO PRIMAVERA': 'ARCEBURGO', 'SÍTIO MAMDEMBO': 'ARCEBURGO', 'SÍTIO BAGAÇO': 'ARCEBURGO',
+    'FAZENDA BRITOS': 'AREZ', 'FAZENDA CÓRREGO DO OURO': 'BOM JESUS DA PENHA', 'SÍTIO NICANOR / GRANJA PALMEIRAS': 'BOM JESUS DA PENHA',
+    'FAZENDA PALMITAL': 'BOM JESUS DA PENHA', 'FAZENDA SÃO JOSÉ': 'BOM JESUS DA PENHA', 'FAZENDA ITÁLIA II': 'BOM JESUS DA PENHA',
+    'FAZENDA GROTÃO': 'CAPITÓLIO', 'FAZENDA SOCORRO': 'CAPITÓLIO', 'SITIO VIRADA': 'CARMO DO RIO CLARO',
+    'FAZENDA PINHEIROS': 'CARMO DO RIO CLARO', 'FAZENDA SÍTIO DA VARGEM': 'CARMO DO RIO CLARO', 'FAZENDA VARGEM DOS PINHEIROS': 'CARMO DO RIO CLARO',
+    'FAZENDA SÃO SEBASTIÃO': 'CARMO DO RIO CLARO', 'FAZENDA NOSSA SENHORA APARECIDA': 'CÁSSIA', 'SÍTIO NOSSA SENHORA DE FÁTIMA': 'CÁSSIA',
+    'FAZENDA MAMONO': 'CÁSSIA', 'FAZENDA SANTA FÉ': 'CÁSSIA', 'SÍTIO NOSSA SENHORA APARECIDA': 'CÁSSIA',
+    'FAZENDA SÃO MIGUEL': 'CONCEIÇÃO DA APARECIDA', 'FAZENDA SANTA CRUZ': 'DELFINÓPOLIS', 'FAZENDA MORRO GRANDE RETIRO': 'DELFINÓPOLIS',
+    'FAZENDA MANDEMBO': 'DELFINÓPOLIS', 'FAZENDA PRATA': 'FORTALEZA DE MINAS', 'SÍTIO BELA VISTA': 'GUAXUPÉ',
+    'SÍTIO ACONCHEGO': 'GUAXUPÉ', 'FAZENDA BOM JARDIM': 'GUAXUPÉ', 'SÍTIO JATOBÁ': 'ITAMOGI', 'SÍTIO SERRA OU LAVRADO': 'ITAMOGI',
+    'FAZENDA SÃO FRANCISCO': 'ITAMOGI', 'FAZENDA SÃO JOÃO': 'ITAMOGI', 'SÍTIO BOA VISTA': 'ITAÚ DE MINAS', 'SÍTIO SANTANA': 'ITAÚ DE MINAS',
+    'SÍTIO CARAS ALTAS': 'ITAÚ DE MINAS', 'SÍTIO SÃO JOSÉ': 'JACUÍ', 'SÍTIO ZUDUM': 'JACUÍ', 'FAZENDA PINHAL DOS AFONSOS': 'JACUÍ',
+    'SÍTIO BICUDOS E ESTEVES': 'JACUÍ', 'SÍTIO MATO DENTRO': 'JACUÍ', 'SÍTIO RETIRO III': 'JACUÍ', 'SITIO AREIAS': 'JURUAIA',
+    'FAZENDA CACHOEIRA': 'JURUAIA', 'SÍTIO SANTO ALEIXO': 'JURUAIA', 'GRANJA BEIRA RIO': 'JURUAIA', 'SÍTIO GRAMA': 'JURUAIA',
+    'GRANJA AREIAS': 'JURUAIA', 'SÍTIO COCOROBO': 'JURUAIA', 'SÍTIO LARANJEIRA': 'JURUAIA', 'SÍTIO CANAÃ': 'JURUAIA',
+    'SÍTIO GOMES': 'JURUAIA', 'SÍTIO AREIA / SÍTIO PICA PAU': 'JURUAIA', 'SITIO BARRA MANSA': 'JURUAIA', 'SITIO SÃO JOSÉ/ SÍTIO AREIAS': 'JURUAIA',
+    'SÍTIO SÃO SEBASTIÃO': 'JURUAIA', 'SÍTIO LARANJEIRAS': 'JURUAIA', 'SÍTIO AREIAS / SÍTIO SANTO ANTÔNIO': 'JURUAIA',
+    'SÍTIO SÃO PAULO / AREIAS': 'JURUAIA', 'SÍTIO BARRA MANSA': 'JURUAIA', 'SÍTIO SANTO ANTÔNIO / GUINÉ': 'JURUAIA',
+    'FAZENDA ITUPAVA': 'JURUAIA', 'SITIO AREIAS DA GRANJA': 'JURUAIA', 'FAZENDA SÃO LUIZ': 'MONTE SANTO DE MINAS',
+    'SÍTIO RECANTO SANTA LUZIA': 'MONTE SANTO DE MINAS', 'SÍTIO IPANEMA I E II': 'MONTE SANTO DE MINAS', 'FAZENDA LIMEIRA': 'MONTE SANTO DE MINAS',
+    'SÍTIO NOVA ESPERANÇA': 'MONTE SANTO DE MINAS', 'SÍTIO ESTANCIA JD': 'MONTE SANTO DE MINAS', 'SÍTIO JABAQUARA': 'MONTE SANTO DE MINAS',
+    'FAZENDA BANANAL': 'MONTE SANTO DE MINAS', 'SÍTIO JABAQUARA OU MARAMBAIA': 'MONTE SANTO DE MINAS', 'FAZENDA BOA ESPERANÇA': 'MONTE SANTO DE MINAS',
+    'SÍTIO MÃE RAINHA': 'MONTE SANTO DE MINAS', 'SÍTIO RANCHO DA MONTANHA': 'MONTE SANTO DE MINAS', 'SÍTIO MODELO': 'MONTE SANTO DE MINAS',
+    'SÍTIO RECANTO OU GUARITA': 'MONTE SANTO DE MINAS', 'SÍTIO CACHOEIRINHA': 'MONTE SANTO DE MINAS', 'ESTÂNCIA SÃO JOÃO': 'MONTE SANTO DE MINAS',
+    'SÍTIO LIMOEIRO': 'MONTE SANTO DE MINAS', 'SÍTIO BAÚ DO BARBOSA': 'MONTE SANTO DE MINAS', 'SÍTIO SANTOS REIS': 'MONTE SANTO DE MINAS',
+    'SÍTIO MARIA FERREIRA': 'MONTE SANTO DE MINAS', 'FAZENDA DONOLANDA': 'MONTE SANTO DE MINAS', 'FAZENDA SANTA RITA': 'MONTE SANTO DE MINAS',
+    'SÍTIO MUZAMBO': 'MUZAMBINHO', 'SITIO BOM RETIRO': 'MUZAMBINHO', 'FAZENDA OURO BRANCO': 'PASSOS',
+    'FAZENDA RETIRO DAS AROEIRAS': 'PASSOS', 'GRANJA PASSOS/SÃO FRANCISCO': 'PASSOS', 'FAZENDA CONQUISTINHA': 'PASSOS',
+    'FAZENDA TAQUARUSSU': 'PASSOS', 'GRANJA PANTANAL / FAZENDA SÃO JOÃO DA BOA VISTA': 'PASSOS', 'FAZENDA MACAUBA': 'PASSOS',
+    'FAZENDA AREIAS': 'PASSOS', 'FAZENDA LAGE': 'PIUMHI', 'FAZENDA CÓRREGO DA PORTEIRA': 'PIUMHI', 'FAZENDA CAMPO ALEGRE': 'PIUMHI',
+    'FAZENDA BOM SUCESSO': 'PIUMHI', 'FAZENDA ÁGUA FRIA': 'PIUMHI', 'SITIO MORADA DO SOL': 'PIUMHI', 'FAZENDA ROCHEDOS': 'PIUMHI',
+    'FAZENDA ÁGUA LIMPA': 'PRATÁPOLIS', 'SÍTIO MORADA DAS ÁGUAS': 'PRATÁPOLIS', 'SÍTIO SANTO EXPEDITO': 'PRATÁPOLIS',
+    'SÍTIO SÃO PEDRO': 'PRATÁPOLIS', 'FAZENDA PALESTINA OLARIA': 'PRATÁPOLIS', 'SÍTIO DA MATA': 'PRATÁPOLIS',
+    'FAZENDA FÁBRICA': 'PRATÁPOLIS', 'SITIO DOIS IRMAOS': 'PRATÁPOLIS', 'FAZENDA PONTAL': 'PRATÁPOLIS', 'SÍTIO JD': 'PRATÁPOLIS',
+    'SÍTIO DOIS IRMÃOS': 'PRATÁPOLIS', 'FAZENDA PONTAL DA PRATA': 'PRATÁPOLIS', 'SÍTIO RANCHO DA LUA': 'PRATÁPOLIS',
+    'FAZENDA NOSSA SENHORA DA PENHA': 'SÃO JOÃO BATISTA DO GLÓRIA', 'GRANJA CANCANZINHO': 'SÃO JOÃO BATISTA DO GLÓRIA',
+    'FAZENDA SANTA BÁRBARA': 'SÃO JOÃO BATISTA DO GLÓRIA', 'FAZENDA PONTA DA SERRA': 'SÃO JOÃO BATISTA DO GLÓRIA',
+    'FAZENDA FLORADA DA SERRA': 'SÃO SEBASTIÃO DO PARAÍSO', 'FAZENDA MORRO VERMELHO': 'SÃO SEBASTIÃO DO PARAÍSO',
+    'FAZENDA SANTANA': 'SÃO SEBASTIÃO DO PARAÍSO', 'FAZENDA MUMBUCA': 'SÃO SEBASTIÃO DO PARAÍSO', 'FAZENDA BARRA DA LONTRA': 'SÃO SEBASTIÃO DO PARAÍSO',
+    'SÍTIO MAMONINHO': 'SÃO SEBASTIÃO DO PARAÍSO', 'SÍTIO DAS OLIVEIRAS / BARREIRINHO': 'SÃO SEBASTIÃO DO PARAÍSO',
+    'SÍTIO SANTO ANTÔNIO': 'SÃO SEBASTIÃO DO PARAÍSO', 'FAZENDA BARREIRO': 'SÃO SEBASTIÃO DO PARAÍSO', 'FAZENDA RECANTO FELIZ': 'SÃO SEBASTIÃO DO PARAÍSO',
+    'SITIO NOSSA SENHORA DO DESTERRO': 'SÃO SEBASTIÃO DO PARAÍSO', 'FAZENDA TABULEIRO': 'SÃO SEBASTIÃO DO PARAÍSO',
+    'SÍTIO RIBEIRÃO FUNDO': 'SÃO SEBASTIÃO DO PARAÍSO', 'SÍTIO RECANTO FELIZ': 'SÃO SEBASTIÃO DO PARAÍSO',
+    'SÍTIO TÁBOAS': 'SÃO SEBASTIÃO DO PARAÍSO', 'SÍTIO PARAÍSO': 'SÃO SEBASTIÃO DO PARAÍSO', 'FAZENDA BELA VISTA': 'SÃO SEBASTIÃO DO PARAÍSO',
+    'FAZENDA NOVO HORIZONTE DOS PAIXÃO': 'SÃO TOMÁS DE AQUINO', 'FAZENDA PORTOBELLO': 'SÃO TOMÁS DE AQUINO'
+}
 
 # --- 2. SELETOR DE OPERAÇÃO ---
 st.sidebar.header("Configuração da Operação")
@@ -242,9 +295,8 @@ def load_data_universal(uploaded_file):
                 if df[col].dtype == object: df[col] = df[col].apply(clean_float)
                 else: df[col] = pd.to_numeric(df[col], errors='coerce')
         
-        # REMOÇÃO DA LIMPEZA AGRESSIVA DE ACENTOS EM DADOS
         if 'CIDADE' in df.columns:
-            df['CIDADE'] = df['CIDADE'].astype(str).str.title() # Apenas formata, não remove acentos
+            df['CIDADE'] = df['CIDADE'].astype(str).str.encode('ascii', 'ignore').str.decode('utf-8').str.title()
 
         return df
     except Exception as e:
@@ -303,21 +355,11 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
             
             poi = get_current_poi_name(lat, lon, pois_dict, raio_points)
             
-            if not poi:
+            # Lógica para Ipiguá (sem POIs fixos, apenas Cidades)
+            if not poi and "Ipiguá" in base_name:
                 if row['KM/H'] == 0 and 'CIDADE' in df.columns and pd.notna(row['CIDADE']):
-                    c_raw = str(row['CIDADE']).strip()
-                    # Ignora base (Maiúsculo para comparação)
-                    c_check = c_raw.upper()
-                    base_check = base_name.upper()
-                    
-                    # Verifica se a cidade não é parte do nome da base (Ex: "PASSOS" em "JBS PASSOS")
-                    is_base_city = False
-                    for parte in base_check.split():
-                        if len(parte) > 3 and parte in c_check: 
-                            is_base_city = True
-                    
-                    if not is_base_city: 
-                        poi = c_raw.title() # Mantém acentos e formata
+                    c_raw = str(row['CIDADE']).strip().title()
+                    if "IPIGUA" not in c_raw.upper(): poi = c_raw
 
             if poi and poi != base_name and poi != viagem_atual['last_poi']:
                 viagem_atual['rota_seq'].append(poi)
@@ -333,8 +375,8 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
                     hodo_final = row['HODÔMETRO'] if 'HODÔMETRO' in df.columns else 0
                     dist = abs(hodo_final - viagem_atual['hodo_inicial'])
                     duracao_segundos = (viagem_atual['fim'] - viagem_atual['inicio']).total_seconds()
-                    duracao_horas_float = duracao_segundos / 3600
                     duracao_fmt = format_seconds_to_hms(duracao_segundos)
+                    duracao_hours = duracao_segundos / 3600
                     
                     df_v = pd.DataFrame(viagem_atual['dados'])
                     
@@ -355,34 +397,53 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
                             tempo_idle = len(df_idle)*delta_t
                             if not df_idle.empty:
                                 df_idle['POI'] = df_idle.apply(lambda r: get_current_poi_name(r['LATITUDE'], r['LONGITUDE'], pois_dict, raio_points), axis=1)
-                                if 'CIDADE' in df_idle.columns:
+                                if "Ipiguá" in base_name and 'CIDADE' in df_idle.columns:
                                     df_idle['POI'] = df_idle['POI'].fillna(df_idle['CIDADE'])
                                 
                                 df_idle['L'] = df_idle['POI'].fillna("Via")
                                 ct = df_idle['L'].value_counts()
                                 if not ct.empty: local_crit, tempo_local = ct.idxmax(), ct.max()*delta_t
 
+                    # CIDADE PRINCIPAL & ROTA LIMPA (PASSOS)
                     cidade_destino_principal = "-"
-                    rota_display = " > ".join(viagem_atual['rota_seq'])
-
-                    if 'CIDADE' in df_v.columns:
-                        stops_all = df_v[df_v['KM/H'] == 0].copy()
-                        if not stops_all.empty:
-                            stops_all['C_NORM'] = stops_all['CIDADE'].astype(str).str.strip().str.upper()
-                            exclusoes = ["-", "NAN"] + base_name.upper().split()
-                            
-                            counts = stops_all['C_NORM'].value_counts()
-                            for city, count in counts.items():
-                                is_valid = True
-                                for exc in exclusoes:
-                                    if len(exc) > 3 and exc in city: is_valid = False
-                                
-                                if is_valid:
-                                    cidade_destino_principal = stops_all[stops_all['C_NORM'] == city]['CIDADE'].iloc[0].title()
-                                    break
                     
-                    if cidade_destino_principal != "-" and len(viagem_atual['rota_seq']) <= 2:
-                         rota_display = f"{base_name} > {cidade_destino_principal} > {base_name}"
+                    # Limpa a lista de rota para remover cidades se for operação Passos
+                    rota_limpa = []
+                    for ponto in viagem_atual['rota_seq']:
+                        if nome_op == "Passos (Frango)":
+                            # Só adiciona se for a Base ou estiver na lista de POIs conhecidos (Granjas)
+                            if ponto == base_name or ponto in POIS_PASSOS:
+                                rota_limpa.append(ponto)
+                        else:
+                            rota_limpa.append(ponto)
+                    
+                    rota_display = " > ".join(rota_limpa)
+
+                    # Busca Cidade Principal (Baseada no mapa)
+                    if 'CIDADE' in df_v.columns:
+                        # Prioridade: Cidade do Local Crítico (Ociosidade)
+                        if local_crit in MAPA_CIDADES_PASSOS:
+                            cidade_destino_principal = MAPA_CIDADES_PASSOS[local_crit]
+                        
+                        # Fallback: Cidade onde ficou mais tempo parado no geral
+                        if cidade_destino_principal == "-":
+                            stops = df_v[df_v['KM/H'] == 0].copy()
+                            if not stops.empty:
+                                stops['C_NORM'] = stops['CIDADE'].astype(str).str.strip().str.upper()
+                                ex = ["-", "NAN"] + base_name.upper().split()
+                                cts = stops['C_NORM'].value_counts()
+                                for c, _ in cts.items():
+                                    if not any(x in c for x in ex):
+                                        cidade_destino_principal = stops[stops['C_NORM']==c]['CIDADE'].iloc[0].title()
+                                        break
+                    
+                    # Se for Passos e tiver só Base > Base, tenta inserir a fazenda se detectada
+                    if nome_op == "Passos (Frango)":
+                        # Se a rota ficou "JBS > JBS", mas tem um local critico (fazenda), insere ele
+                        if len(rota_limpa) == 2 and local_crit in POIS_PASSOS:
+                             rota_display = f"{base_name} > {local_crit} > {base_name}"
+                             if cidade_destino_principal == "-":
+                                 cidade_destino_principal = MAPA_CIDADES_PASSOS.get(local_crit, "-")
 
                     viagens.append({
                         'Operação': nome_op,
@@ -391,7 +452,7 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
                         'Data Início': viagem_atual['inicio'],
                         'Data Fim': viagem_atual['fim'],
                         'Tempo Total': duracao_fmt,
-                        'Duração Horas': duracao_horas_float,
+                        'Duração Horas': duracao_hours,
                         'Cidade Principal': cidade_destino_principal, 
                         'Rota': rota_display,
                         'Distância (km)': round(dist, 2),
@@ -404,13 +465,13 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
                     em_viagem = False
     
     if em_viagem:
-        duracao_segundos = (df.iloc[-1]['DATA/HORA'] - viagem_atual['inicio']).total_seconds()
+        dur = (df.iloc[-1]['DATA/HORA'] - viagem_atual['inicio']).total_seconds()
         viagens.append({
             'Operação': nome_op,
             'Placa': placa, 'ID Viagem': viagem_atual['id'],
             'Data Início': viagem_atual['inicio'], 'Data Fim': df.iloc[-1]['DATA/HORA'],
-            'Tempo Total': format_seconds_to_hms(duracao_segundos),
-            'Duração Horas': duracao_segundos/3600,
+            'Tempo Total': format_seconds_to_hms(dur),
+            'Duração Horas': dur/3600,
             'Cidade Principal': "-",
             'Rota': " > ".join(viagem_atual['rota_seq']),
             'Distância (km)': 0, 'Vel. Média >50km/h': 0,
@@ -419,7 +480,7 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
         })
     return pd.DataFrame(viagens)
 
-# --- INTERFACE PRINCIPAL ---
+# --- INTERFACE ---
 
 uploaded_file = st.file_uploader("Arraste relatórios (Qualquer formato)", type=['xlsx', 'xls', 'csv'])
 
@@ -437,8 +498,6 @@ if uploaded_file:
                 st.success(f"Operação {operacao_selecionada}: {len(df_final)} viagens identificadas.")
                 
                 cols_display = ['Operação', 'Placa', 'ID Viagem', 'Data Início', 'Data Fim', 'Cidade Principal', 'Rota', 'Tempo Total', 'Distância (km)', 'Vel. Média >50km/h', 'Tempo Ocioso TOTAL (min)', 'Local Mais Ocioso', 'Tempo Ocioso NO LOCAL (min)']
-                
-                # Formatação para visualização
                 df_show = df_final.copy()
                 df_show['Data Início'] = df_show['Data Início'].dt.strftime('%d/%m/%Y %H:%M:%S')
                 df_show['Data Fim'] = df_show['Data Fim'].dt.strftime('%d/%m/%Y %H:%M:%S')
@@ -466,10 +525,11 @@ if uploaded_file:
                         fig.update_traces(hovertemplate="Rota: %{customdata[0]}<br>Total: %{y}<br>Local: %{customdata[1]} (%{customdata[2]} min)")
                         st.plotly_chart(fig, use_container_width=True)
                     with c2:
-                        # GRÁFICO TEMPO MÉDIO (Corrigido)
-                        df_final['Rota_Graph'] = df_final.apply(lambda x: x['Cidade Principal'] if x['Cidade Principal'] != "-" else x['Rota'], axis=1)
-                        df_g = df_final.groupby('Rota_Graph')['Duração Horas'].mean().reset_index()
-                        fig = px.bar(df_g, y='Rota_Graph', x='Duração Horas', orientation='h', title="Tempo Médio por Destino (h)", text_auto='.1f')
+                        # GRÁFICO TEMPO MÉDIO
+                        # Agrupa por Rota (limpa) ou Cidade Principal se disponível
+                        df_final['Agrupador'] = df_final.apply(lambda x: x['Rota'] if x['Cidade Principal'] == "-" else x['Cidade Principal'], axis=1)
+                        df_g = df_final.groupby('Agrupador')['Duração Horas'].mean().reset_index()
+                        fig = px.bar(df_g, y='Agrupador', x='Duração Horas', orientation='h', title="Tempo Médio (h)", text_auto='.1f')
                         st.plotly_chart(fig, use_container_width=True)
                     
                     c3, c4 = st.columns(2)
