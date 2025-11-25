@@ -10,7 +10,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 st.set_page_config(page_title="Gestão de Frota", layout="wide")
-st.title("🚛 Gestão de Frota")
+st.title("🚛 Gtão de Frota")
 
 # --- 1. LOCAIS (POIs) ---
 
@@ -454,3 +454,4 @@ if uploaded_file:
                         fig = px.scatter(df_final, x='Distância (km)', y='Horas', size='Tempo Ocioso TOTAL (min)', title="Eficiência", custom_data=['Rota'])
                         fig.update_traces(hovertemplate="Rota: %{customdata[0]}")
                         st.plotly_chart(fig, use_container_width=True)
+
