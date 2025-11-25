@@ -29,7 +29,6 @@ POIS_TATUI = {
     "Corumbataí": [(-22.275962, -47.625296), (-22.274258, -47.623837), (-22.27449, -47.621821)]
 }
 
-# LISTA COMPLETA PASSOS (154 Locais)
 POIS_PASSOS = {
     "JBS Passos (Abatedouro)": [(-20.731648, -46.572150), (-20.73273, -46.573021), (-20.731648, -46.57215)],
     'GRANJA MANOELA': [(-20.80083, -46.304)], 'SÍTIO MORRO CAVADO': [(-20.77593, -46.37077)], 
@@ -294,7 +293,8 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name):
             
             poi = get_current_poi_name(lat, lon, pois_dict, raio_points)
             
-            # IPIGUÁ: Se não achou POI, usa a Cidade se estiver parado
+            # IPIGUÁ: Se não achou POI, usa a Cidade se estiver parado (Velocidade 0)
+            # Independente da ignição
             if not poi and "Ipiguá" in base_name:
                 if row['KM/H'] == 0 and 'CIDADE' in df.columns and pd.notna(row['CIDADE']):
                     c_raw = str(row['CIDADE']).strip().title()
@@ -341,21 +341,30 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name):
                                 ct = df_idle['L'].value_counts()
                                 if not ct.empty: local_crit, tempo_local = ct.idxmax(), ct.max()*delta_t
 
-                    # LÓGICA ROTA SIMPLIFICADA (Ipiguá)
-                    rota_display = " > ".join(viagem_atual['rota_seq'])
-                    
-                    # NOVO CAMPO: CIDADE PRINCIPAL
+                    # NOVA LÓGICA DE CIDADE PRINCIPAL (IPIGUÁ)
                     cidade_destino_principal = "-"
+                    rota_display = " > ".join(viagem_atual['rota_seq'])
+
                     if "Ipiguá" in base_name:
-                        if local_crit not in ["-", "Via"]:
-                            cidade_destino_principal = local_crit
-                        elif len(viagem_atual['rota_seq']) > 2:
-                            cidade_destino_principal = viagem_atual['rota_seq'][-2]
-                        elif 'CIDADE' in df_v.columns:
-                            cidades_top = df_v[df_v['KM/H'] == 0]['CIDADE'].value_counts()
-                            for cid in cidades_top.index:
-                                if "IPIGUA" not in str(cid).upper():
-                                    cidade_destino_principal = str(cid).title()
+                        # Filtra paradas (Velocidade 0), ignora Ignição
+                        stops_all = df_v[df_v['KM/H'] == 0].copy()
+                        if not stops_all.empty and 'CIDADE' in stops_all.columns:
+                            # Normaliza nomes
+                            stops_all['C_NORM'] = stops_all['CIDADE'].astype(str).str.strip().str.upper()
+                            # Exclui cidades base
+                            exclusoes = ["IPIGUA", "IPIGUÁ", "PASSOS", "TATUI", "TATUÍ", "-"]
+                            
+                            # Conta ocorrências (tempo parado)
+                            counts = stops_all['C_NORM'].value_counts()
+                            
+                            for city, count in counts.items():
+                                is_valid = True
+                                for exc in exclusoes:
+                                    if exc in city: is_valid = False; break
+                                
+                                if is_valid:
+                                    # Pega o nome original formatado (Title Case)
+                                    cidade_destino_principal = stops_all[stops_all['C_NORM'] == city]['CIDADE'].iloc[0].title()
                                     break
                         
                         if cidade_destino_principal != "-":
