@@ -378,7 +378,7 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
                     dist = abs(hodo_final - viagem_atual['hodo_inicial'])
                     duracao_segundos = (viagem_atual['fim'] - viagem_atual['inicio']).total_seconds()
                     duracao_fmt = format_seconds_to_hms(duracao_segundos)
-                    duracao_hours = duracao_segundos / 3600
+                    duracao_horas_float = duracao_segundos / 3600
                     
                     df_v = pd.DataFrame(viagem_atual['dados'])
                     
@@ -539,3 +539,4 @@ if uploaded_file:
                         fig = px.scatter(df_final, x='Distância (km)', y='Duração Horas', size='Tempo Ocioso TOTAL (min)', title="Eficiência", custom_data=['Rota'])
                         fig.update_traces(hovertemplate="Rota: %{customdata[0]}")
                         st.plotly_chart(fig, use_container_width=True)
+
