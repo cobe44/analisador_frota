@@ -29,7 +29,7 @@ POIS_TATUI = {
 }
 
 POIS_PASSOS = {
-    "JBS Passos": [(-20.731648, -46.572150), (-20.73273, -46.573021), (-20.731648, -46.57215)], 
+    "JBS Passos": [(-20.731648, -46.572150), (-20.73273, -46.573021), (-20.731648, -46.57215)],
     'GRANJA MANOELA': [(-20.80083, -46.304)], 'SÍTIO MORRO CAVADO': [(-20.77593, -46.37077)], 
     'FAZENDA CONQUISTA': [(-20.8788, -46.46472), (-21.31993, -47.00195)], 'SITIO SOQUETE': [(-20.79604, -46.39279)], 
     'SÍTIO LEMBRANÇA': [(-20.73954, -46.39466)], 'SÍTIO MONJOLINHO/SÃO JOSÉ': [(-20.88404, -46.40669)], 
@@ -169,6 +169,7 @@ MAPA_CIDADES_PASSOS = {
 st.sidebar.header("Configuração da Operação")
 operacao_selecionada = st.sidebar.selectbox("Selecione a Operação:", ["Tatuí (Ovos)", "Passos (Frango)", "Ipiguá (Pintos)"])
 
+# Configurações Dinâmicas
 if operacao_selecionada == "Tatuí (Ovos)":
     POIS_ATIVOS = POIS_TATUI
     NOME_BASE = "Base Tatuí"
@@ -179,7 +180,7 @@ elif operacao_selecionada == "Passos (Frango)":
     NOME_BASE = "JBS Passos" 
     RAIO_PADRAO_BASE = 3000 
     RAIO_LOCAL_PADRAO = 120 
-else: 
+else: # Ipiguá
     POIS_ATIVOS = POIS_IPIGUA
     NOME_BASE = "Incubatório Ipiguá"
     RAIO_PADRAO_BASE = 2000
@@ -295,9 +296,9 @@ def load_data_universal(uploaded_file):
                 if df[col].dtype == object: df[col] = df[col].apply(clean_float)
                 else: df[col] = pd.to_numeric(df[col], errors='coerce')
         
-        # CORREÇÃO: REMOVIDO CÓDIGO QUE LIMPAVA ACENTOS DE FORMA ERRADA
+        # SEM LIMPEZA AGRESSIVA DE CIDADE (Respeitar acentos)
         if 'CIDADE' in df.columns:
-            df['CIDADE'] = df['CIDADE'].astype(str).str.strip().str.title()
+            df['CIDADE'] = df['CIDADE'].astype(str).str.strip().str.upper()
 
         return df
     except Exception as e:
@@ -356,10 +357,11 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
             
             poi = get_current_poi_name(lat, lon, pois_dict, raio_points)
             
+            # IPIGUÁ: Se não achou POI, usa a Cidade
             if not poi and "Ipiguá" in base_name:
                 if row['KM/H'] == 0 and 'CIDADE' in df.columns and pd.notna(row['CIDADE']):
-                    c_raw = str(row['CIDADE']).strip().title()
-                    if "IPIGUA" not in c_raw.upper(): poi = c_raw
+                    c_raw = str(row['CIDADE']).strip().upper()
+                    if "IPIGUA" not in c_raw: poi = str(row['CIDADE']) # Mantém original do CSV
 
             if poi and poi != base_name and poi != viagem_atual['last_poi']:
                 viagem_atual['rota_seq'].append(poi)
@@ -408,7 +410,7 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
                     cidade_destino_principal = "-"
                     rota_limpa = []
                     
-                    # Lógica Limpeza de Rota (Só deixa Base e Fazendas)
+                    # Limpeza Rota Passos (Remove Cidades intermediárias)
                     if nome_op == "Passos (Frango)":
                         for ponto in viagem_atual['rota_seq']:
                             if ponto == base_name or ponto in POIS_PASSOS:
@@ -418,7 +420,7 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
                     
                     rota_display = " > ".join(rota_limpa)
 
-                    # Busca Cidade Principal (Com Mapeamento)
+                    # Busca Cidade Principal
                     if 'CIDADE' in df_v.columns:
                         if local_crit in MAPA_CIDADES_PASSOS:
                             cidade_destino_principal = MAPA_CIDADES_PASSOS[local_crit]
@@ -431,7 +433,9 @@ def process_routes(df, raio_base, raio_points, placa, pois_dict, base_name, nome
                                 cts = stops['C_NORM'].value_counts()
                                 for c, _ in cts.items():
                                     if not any(x in c for x in ex):
-                                        cidade_destino_principal = stops[stops['C_NORM']==c]['CIDADE'].iloc[0].title()
+                                        # Pega a primeira ocorrência original
+                                        raw_name = stops[stops['C_NORM']==c]['CIDADE'].iloc[0]
+                                        cidade_destino_principal = str(raw_name)
                                         break
                     
                     if nome_op == "Passos (Frango)":
